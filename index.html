@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini-Powered MCQ Cleaner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.4em;
+            font-weight: 600;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .api-section {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-left: 4px solid #ff9800;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .api-section h3 {
+            color: #856404;
+            margin-bottom: 15px;
+        }
+        .api-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .api-section input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ffc107;
+            border-radius: 6px;
+            font-size: 1em;
+        }
+        .test-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .test-btn:hover {
+            background: #218838;
+        }
+        .api-section a {
+            color: #0066cc;
+            font-weight: 600;
+        }
+        .api-section ol {
+            margin: 15px 0 15px 25px;
+        }
+        .api-section li {
+            margin-bottom: 8px;
+            color: #856404;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .section {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+        textarea {
+            width: 100%;
+            height: 400px;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        textarea:read-only {
+            background: #f7fafc;
+        }
+        .buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        button {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1em;
+        }
+        .btn-ai {
+            background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(66, 133, 244, 0.4);
+        }
+        .btn-ai:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(66, 133, 244, 0.6);
+        }
+        .btn-ai:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .btn-convert {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn-convert:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        .btn-clear {
+            background: white;
+            border: 2px solid #e2e8f0;
+            color: #4a5568;
+        }
+        .btn-clear:hover {
+            background: #f7fafc;
+        }
+        .btn-download {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
+        }
+        .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(72, 187, 120, 0.6);
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            background: #e3f2fd;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .loading.active {
+            display: block;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4285f4;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+        .message.success {
+            background: #f0fff4;
+            border-left: 4px solid #48bb78;
+            color: #22543d;
+            display: block;
+        }
+        .message.error {
+            background: #fff5f5;
+            border-left: 4px solid #f56565;
+            color: #742a2a;
+            display: block;
+        }
+        .message.warning {
+            background: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            color: #92400e;
+            display: block;
+        }
+        .debug-info {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85em;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .info-box {
+            background: #ebf4ff;
+            border: 1px solid #bee3f8;
+            border-left: 4px solid #4299e1;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+        .info-box h3 {
+            color: #2c5282;
+            margin-bottom: 15px;
+        }
+        .info-box ul {
+            margin-left: 20px;
+            color: #2d3748;
+        }
+        .info-box li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Gemini-Powered MCQ Cleaner <span class="badge">GEMINI AI</span></h1>
+        <p class="subtitle">Paste messy MCQs → Gemini AI cleans and formats → Get perfect CSV</p>
+
+        <div class="api-section">
+            <h3>🔑 Setup: Get Your Free Gemini API Key</h3>
+            <ol>
+                <li>Go to <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></li>
+                <li>Click "Get API Key" → "Create API key in new project"</li>
+                <li>Copy the API key (starts with "AIza...")</li>
+                <li>Paste it below and click "Test Connection"</li>
+            </ol>
+            <div class="api-input-group">
+                <input type="text" id="apiKey" placeholder="Paste your Gemini API key here (starts with AIza...)">
+                <button class="test-btn" onclick="testApiKey()">🔍 Test Connection</button>
+            </div>
+            <div id="apiMessage"></div>
+        </div>
+
+        <div class="grid">
+            <div class="section">
+                <label for="input">📥 Paste Your Messy MCQs Here</label>
+                <textarea id="input" placeholder="Paste ANY messy MCQ text here...
+
+Examples of what Gemini AI can handle:
+• Wrong numbering (3, 1, 5, 2, 4)
+• Missing options
+• Poor formatting
+• Extra spaces or line breaks
+• Inconsistent style
+• Mixed formats
+
+Just paste and let Gemini AI fix it!"></textarea>
+                <div class="buttons">
+                    <button class="btn-ai" onclick="cleanWithGemini()" id="aiBtn">
+                        ✨ Clean with Gemini AI
+                    </button>
+                    <button class="btn-clear" onclick="clearAll()">🗑️ Clear</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <label for="cleaned">🎯 Gemini-Cleaned MCQs</label>
+                <textarea id="cleaned" readonly placeholder="Gemini-cleaned MCQs will appear here..."></textarea>
+                <div class="buttons">
+                    <button class="btn-convert" onclick="convertToCSV()" id="convertBtn" style="display: none;">
+                        📊 Convert to CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="section" style="margin-top: 20px;" id="csvSection" style="display: none;">
+            <label for="output">📤 CSV Output</label>
+            <textarea id="output" readonly placeholder="CSV output will appear here..."></textarea>
+            <div class="buttons">
+                <button class="btn-download" onclick="downloadCSV()" id="downloadBtn" style="display: none;">
+                    💾 Download CSV File
+                </button>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <strong>Gemini AI is cleaning your MCQs...</strong>
+            <p>This may take 10-30 seconds</p>
+        </div>
+
+        <div id="message"></div>
+
+        <div class="info-box">
+            <h3>🚀 How to Use</h3>
+            <ul>
+                <li><strong>Step 1:</strong> Get your free Gemini API key (see yellow box above)</li>
+                <li><strong>Step 2:</strong> Click "Test Connection" to verify your API key works</li>
+                <li><strong>Step 3:</strong> Copy messy MCQ text from your book/PDF</li>
+                <li><strong>Step 4:</strong> Paste it in the left box</li>
+                <li><strong>Step 5:</strong> Click "Clean with Gemini AI"</li>
+                <li><strong>Step 6:</strong> Click "Convert to CSV" → Download!</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            const savedKey = localStorage.getItem('gemini_api_key');
+            if (savedKey) {
+                document.getElementById('apiKey').value = savedKey;
+            }
+        };
+
+        async function testApiKey() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const messageDiv = document.getElementById('apiMessage');
+            
+            if (!apiKey) {
+                messageDiv.className = 'message error';
+                messageDiv.innerHTML = '❌ Please paste your API key first!';
+                return;
+            }
+
+            if (!apiKey.startsWith('AIza')) {
+                messageDiv.className = 'message warning';
+                messageDiv.innerHTML = '⚠️ Warning: API key should start with "AIza". Please check if you copied it correctly.';
+                return;
+            }
+
+            messageDiv.className = 'message';
+            messageDiv.innerHTML = '🔄 Testing connection...';
+            messageDiv.style.display = 'block';
+            messageDiv.style.background = '#e3f2fd';
+            messageDiv.style.borderLeft = '4px solid #2196f3';
+            messageDiv.style.color = '#1565c0';
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: "Say 'Hello' in one word."
+                            }]
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.candidates && data.candidates[0]) {
+                    localStorage.setItem('gemini_api_key', apiKey);
+                    messageDiv.className = 'message success';
+                    messageDiv.innerHTML = '✅ <strong>API Key is valid!</strong> Connection successful. You can now use Gemini AI to clean MCQs.';
+                } else if (data.error) {
+                    messageDiv.className = 'message error';
+                    let errorMsg = '❌ <strong>API Key Error:</strong> ';
+                    
+                    if (data.error.message.includes('API key not valid')) {
+                        errorMsg += 'Invalid API key. Please check if you copied it correctly from Google AI Studio.';
+                    } else if (data.error.message.includes('quota')) {
+                        errorMsg += 'Quota exceeded. You may have hit the free tier limit. Try again later.';
+                    } else {
+                        errorMsg += data.error.message;
+                    }
+                    
+                    messageDiv.innerHTML = errorMsg + '<div class="debug-info">Error details: ' + JSON.stringify(data.error, null, 2) + '</div>';
+                } else {
+                    throw new Error('Unexpected response format');
+                }
+
+            } catch (error) {
+                messageDiv.className = 'message error';
+                messageDiv.innerHTML = '❌ <strong>Connection failed:</strong> ' + error.message + 
+                    '<br><br><strong>Possible causes:</strong><br>• No internet connection<br>• API key is incorrect<br>• Google AI services are temporarily unavailable';
+            }
+        }
+
+        async function cleanWithGemini() {
+            const input = document.getElementById('input').value;
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const loading = document.getElementById('loading');
+            const aiBtn = document.getElementById('aiBtn');
+            const cleanedTextarea = document.getElementById('cleaned');
+            
+            if (!apiKey) {
+                showMessage('❌ Please enter your Gemini API key first and test the connection!', 'error');
+                return;
+            }
+
+            if (!input.trim()) {
+                showMessage('❌ Please paste your MCQ text first!', 'error');
+                return;
+            }
+
+            loading.classList.add('active');
+            aiBtn.disabled = true;
+            document.getElementById('message').innerHTML = '';
+
+            try {
+                const prompt = `You are an MCQ formatting expert. Clean and reformat the following messy MCQ text according to these rules:
+
+1. Number MCQs sequentially starting from 1
+2. Each MCQ must have EXACTLY 5 options labeled A, B, C, D, E
+3. Format each MCQ as:
+   [Number]. [Reference if any]
+   [Question text]
+   - A. [Option A text]
+   - B. [Option B text]  
+   - C. [Option C text]
+   - D. [Option D text]
+   - E. [Option E text]
+
+4. Keep all original question and option text - DO NOT modify medical/technical content
+5. Fix numbering, spacing, and formatting issues
+6. If options are missing, note it but format what exists
+7. Remove extra line breaks and clean up spacing
+
+MESSY MCQ TEXT:
+${input}
+
+OUTPUT ONLY THE CLEANED MCQs - NO EXPLANATIONS OR COMMENTS.`;
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: prompt
+                            }]
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0]) {
+                    const cleanedText = data.candidates[0].content.parts[0].text;
+                    cleanedTextarea.value = cleanedText;
+                    document.getElementById('convertBtn').style.display = 'block';
+                    showMessage('✅ MCQs cleaned successfully by Gemini AI! Now click "Convert to CSV"', 'success');
+                } else if (data.error) {
+                    let errorMsg = '❌ Gemini AI Error: ';
+                    
+                    if (data.error.message.includes('API key not valid')) {
+                        errorMsg += 'Invalid API key. Please get a new key from Google AI Studio.';
+                    } else if (data.error.message.includes('quota')) {
+                        errorMsg += 'Quota exceeded. Free tier limits: 15 requests/min, 1M tokens/day. Please wait and try again.';
+                    } else if (data.error.message.includes('SAFETY')) {
+                        errorMsg += 'Content safety filter triggered. Try with different MCQ text.';
+                    } else {
+                        errorMsg += data.error.message;
+                    }
+                    
+                    showMessage(errorMsg + '<div class="debug-info">Full error: ' + JSON.stringify(data.error, null, 2) + '</div>', 'error');
+                } else {
+                    throw new Error('Invalid response from Gemini AI');
+                }
+
+            } catch (error) {
+                console.error('Gemini Error:', error);
+                let errorMsg = '❌ Request failed: ' + error.message;
+                errorMsg += '<br><br><strong>Troubleshooting:</strong>';
+                errorMsg += '<br>1. Check your internet connection';
+                errorMsg += '<br>2. Click "Test Connection" to verify API key';
+                errorMsg += '<br>3. Try with fewer MCQs (paste 2-3 MCQs first)';
+                errorMsg += '<br>4. Make sure you\'re not exceeding quota (15 requests/min)';
+                showMessage(errorMsg, 'error');
+            } finally {
+                loading.classList.remove('active');
+                aiBtn.disabled = false;
+            }
+        }
+
+        function convertToCSV() {
+            const input = document.getElementById('cleaned').value;
+            const output = document.getElementById('output');
+            const csvSection = document.getElementById('csvSection');
+            const downloadBtn = document.getElementById('downloadBtn');
+            
+            if (!input.trim()) {
+                showMessage('❌ No cleaned text to convert!', 'error');
+                return;
+            }
+
+            try {
+                const lines = input.split('\n');
+                const mcqs = [];
+                let currentMCQ = null;
+                let questionText = '';
+                let options = [];
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    
+                    const mcqMatch = line.match(/^#{0,3}\s*\*{0,2}(\d+)\./);
+                    
+                    if (mcqMatch) {
+                        if (currentMCQ && options.length === 5) {
+                            currentMCQ.options = options;
+                            mcqs.push(currentMCQ);
+                        }
+                        
+                        const mcqNumber = parseInt(mcqMatch[1]);
+                        currentMCQ = { number: mcqNumber, question: '', options: [] };
+                        questionText = '';
+                        options = [];
+                        continue;
+                    }
+
+                    if (currentMCQ && !line.match(/^-?\s*[\(\[]?[A-E][\.\)\]]/i) && line.length > 0 && !line.startsWith('#')) {
+                        questionText += (questionText ? ' ' : '') + line;
+                    }
+
+                    const optionMatch = line.match(/^-?\s*[\(\[]?([A-E])[\.\)\]]\s*(.+)/i);
+                    if (optionMatch && currentMCQ) {
+                        const optionLetter = optionMatch[1].toUpperCase();
+                        const optionText = optionMatch[2].trim();
+                        
+                        if (!currentMCQ.question && questionText) {
+                            currentMCQ.question = questionText.trim();
+                        }
+                        
+                        options.push({ letter: optionLetter, text: optionText });
+                    }
+                }
+
+                if (currentMCQ && options.length === 5) {
+                    currentMCQ.options = options;
+                    mcqs.push(currentMCQ);
+                }
+
+                if (mcqs.length === 0) {
+                    showMessage('❌ No valid MCQs found! Make sure the cleaned text has proper format.', 'error');
+                    return;
+                }
+
+                let csv = 'MCQ Number,Stem Number,Question/Option Text\n';
+                
+                mcqs.forEach(mcq => {
+                    const cleanQuestion = mcq.question.replace(/"/g, '""');
+                    csv += `${mcq.number},0,"${cleanQuestion}"\n`;
+                    
+                    mcq.options.forEach((opt, idx) => {
+                        const stemNumber = idx + 1;
+                        const cleanOption = opt.text.replace(/"/g, '""');
+                        csv += `${mcq.number},${stemNumber},"${cleanOption}"\n`;
+                    });
+                });
+
+                output.value = csv;
+                csvSection.style.display = 'block';
+                downloadBtn.style.display = 'block';
+                showMessage(`✅ Successfully converted ${mcqs.length} MCQ(s) to CSV!`, 'success');
+
+                csvSection.scrollIntoView({ behavior: 'smooth' });
+
+            } catch (err) {
+                showMessage('❌ Conversion error: ' + err.message, 'error');
+            }
+        }
+
+        function downloadCSV() {
+            const csv = document.getElementById('output').value;
+            if (!csv) {
+                showMessage('❌ No CSV to download!', 'error');
+                return;
+            }
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'gemini_cleaned_mcqs.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showMessage('✅ CSV file downloaded successfully!', 'success');
+        }
+
+        function clearAll() {
+            document.getElementById('input').value = '';
+            document.getElementById('cleaned').value = '';
+            document.getElementById('output').value = '';
+            document.getElementById('message').innerHTML = '';
+            document.getElementById('convertBtn').style.display = 'none';
+            document.getElementById('downloadBtn').style.display = 'none';
+            document.getElementById('csvSection').style.display = 'none';
+        }
+
+        function showMessage(text, type) {
+            const message = document.getElementById('message');
+            message.className = 'message ' + type;
+            message.innerHTML = text;
+        }
+    </script>
+</body>
+</html>
